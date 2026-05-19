@@ -1,6 +1,10 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+function getAI(): GoogleGenAI {
+  const userKey = typeof window !== "undefined" ? localStorage.getItem("aistudio_api_key") : null;
+  const apiKey = userKey || process.env.GEMINI_API_KEY || "";
+  return new GoogleGenAI({ apiKey });
+}
 
 export interface CompanyResearch {
   companyIntelligence: {
@@ -59,7 +63,7 @@ export async function analyzeFit(
   
   Provide the analysis for an MBA student to see their strategic alignment.`;
 
-  const response = await ai.models.generateContent({
+  const response = await getAI().models.generateContent({
     model: "gemini-3-flash-preview",
     contents: prompt,
     config: {
@@ -99,7 +103,7 @@ export async function researchCompany(companyName: string, roleTitle: string): P
 
   Focus on information that would help an MBA student write a world-class, highly personalized application.`;
 
-  const response = await ai.models.generateContent({
+  const response = await getAI().models.generateContent({
     model: "gemini-3-flash-preview",
     contents: prompt,
     config: {
@@ -171,7 +175,7 @@ export async function generateCoverLetter(
     OUTPUT: A complete, modern cover letter.
   `;
 
-  const response = await ai.models.generateContent({
+  const response = await getAI().models.generateContent({
     model: "gemini-3-flash-preview",
     contents: prompt,
     config: {
@@ -211,7 +215,7 @@ export async function refineCoverLetter(
     Return ONLY the refined text.
   `;
 
-  const response = await ai.models.generateContent({
+  const response = await getAI().models.generateContent({
     model: "gemini-3-flash-preview",
     contents: prompt,
     config: {

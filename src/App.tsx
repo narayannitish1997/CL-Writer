@@ -15,7 +15,8 @@ import {
   RefreshCw,
   ChevronLeft,
   Moon,
-  Sun
+  Sun,
+  Key
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,6 +35,14 @@ type Step = "target" | "researching" | "research_result" | "resume" | "writing" 
 export default function App() {
   const [step, setStep] = useState<Step>("target");
   const [darkMode, setDarkMode] = useState(true);
+
+  const [apiKeyInput, setApiKeyInput] = useState("");
+  const [apiKeySaved, setApiKeySaved] = useState(() => {
+    if (typeof window !== "undefined") {
+      return !!(localStorage.getItem("aistudio_api_key") || process.env.GEMINI_API_KEY);
+    }
+    return false;
+  });
 
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showClearSuccess, setShowClearSuccess] = useState(false);
@@ -82,6 +91,7 @@ export default function App() {
   const [isRefining, setIsRefining] = useState(false);
   const [refinementText, setRefinementText] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [apiKeyError, setApiKeyError] = useState<string | null>(null);
 
   // Save state on change
   useEffect(() => {
@@ -259,6 +269,106 @@ export default function App() {
     setTimeout(() => setShowClearSuccess(false), 5000);
   };
 
+  if (!apiKeySaved) {
+    return (
+      <div className="min-h-screen bg-background text-foreground font-sans selection:bg-blue-100 selection:text-blue-900 transition-colors duration-700 flex items-center justify-center relative p-6 overflow-hidden">
+        {/* Decorative Grid/Ornaments background */}
+        <div className="absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80" aria-hidden="true">
+          <div className="relative left-[calc(50%-11rem)] aspect-1155/678 w-[36rem] -translate-x-1/2 rotate-[30deg] bg-linear-to-tr from-blue-600 to-indigo-600 opacity-20 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]"></div>
+        </div>
+
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-md space-y-8"
+        >
+          <div className="flex flex-col items-center text-center space-y-4">
+            <div className="relative flex items-center justify-center">
+              <div className="absolute -inset-1 rounded-2xl bg-linear-to-r from-blue-600 to-indigo-600 opacity-30 blur-sm animate-pulse" />
+              <div className="relative w-16 h-16 bg-linear-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-500/10">
+                <Sparkles size={32} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-3xl font-bold tracking-tight text-foreground">Get Started</h2>
+              <p className="text-muted-foreground text-sm max-w-sm">
+                To use Bewerbung AI, you need a free Google AI Studio API key. This keeps the application free and secure for everyone.
+              </p>
+            </div>
+          </div>
+
+          <Card className="border-border shadow-2xl bg-card">
+            <CardContent className="p-8 space-y-5">
+              <div className="space-y-2">
+                <div className="text-sm font-semibold text-foreground/80 flex items-center justify-between">
+                  <Label htmlFor="api-key">Google AI Studio API Key</Label>
+                  <a 
+                    href="https://aistudio.google.com" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-500 hover:text-blue-600 font-medium transition-colors flex items-center gap-1"
+                  >
+                    Get a free key <ArrowRight size={10} />
+                  </a>
+                </div>
+                <div className="relative">
+                  <Key className="absolute left-3 top-3 text-muted-foreground" size={18} />
+                  <Input 
+                    id="api-key"
+                    type="password"
+                    placeholder="AIzaSy..." 
+                    className="pl-10 border-input focus:ring-blue-500 bg-background"
+                    value={apiKeyInput}
+                    onChange={(e) => setApiKeyInput(e.target.value.trim())}
+                  />
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  Your key is saved locally in your browser (<code className="font-mono text-[10px] bg-muted px-1 py-0.5 rounded">localStorage</code>) and is used only to directly address the Google Gemini model. It is never relayed to any tracking server.
+                </p>
+              </div>
+
+              {apiKeyError && (
+                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-xs font-medium">
+                  {apiKeyError}
+                </div>
+              )}
+            </CardContent>
+            <CardFooter className="p-8 pt-0 flex flex-col gap-4">
+              <Button 
+                disabled={!apiKeyInput} 
+                className="w-full bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white h-11 text-sm font-medium shadow-lg shadow-blue-500/10 border-none rounded-xl"
+                onClick={() => {
+                  if (apiKeyInput.startsWith("AIzaSy")) {
+                    localStorage.setItem("aistudio_api_key", apiKeyInput);
+                    setApiKeySaved(true);
+                    setApiKeyError(null);
+                  } else {
+                    setApiKeyError("Invalid API key format. It should start with 'AIzaSy'. Verify and paste the correct key from AI Studio.");
+                  }
+                }}
+              >
+                Save & Continue
+                <ArrowRight size={16} className="ml-2" />
+              </Button>
+              {process.env.GEMINI_API_KEY && (
+                <Button 
+                  variant="ghost" 
+                  onClick={() => {
+                    setApiKeySaved(true);
+                    setApiKeyError(null);
+                  }}
+                  className="w-full text-xs text-muted-foreground hover:text-foreground h-9"
+                >
+                  Use system default key
+                </Button>
+              )}
+            </CardFooter>
+          </Card>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground font-sans selection:bg-blue-100 selection:text-blue-900 transition-colors duration-700">
       {/* Clear Confirmation Modal */}
@@ -349,6 +459,18 @@ export default function App() {
             <h1 className="font-bold text-xl tracking-tight">Bewerbung AI</h1>
           </div>
           <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setApiKeyInput(localStorage.getItem("aistudio_api_key") || "");
+                setApiKeySaved(false);
+              }}
+              className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1.5 h-9 px-3 rounded-lg border border-border/60 bg-muted/30"
+            >
+              <Key size={14} />
+              <span>API Key</span>
+            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -878,6 +1000,19 @@ export default function App() {
               className="text-xs text-muted-foreground hover:text-destructive transition-colors h-auto p-0"
             >
               Clear All Session Data
+            </Button>
+            <span className="text-muted-foreground/30 text-xs">|</span>
+            <Button 
+              variant="link" 
+              size="sm" 
+              onClick={() => {
+                setApiKeyInput(localStorage.getItem("aistudio_api_key") || "");
+                setApiKeySaved(false);
+              }}
+              className="text-xs text-muted-foreground hover:text-blue-500 transition-colors h-auto p-0 flex items-center gap-1"
+            >
+              <Key size={12} />
+              <span>Configure API Key</span>
             </Button>
           </div>
           <div className="flex gap-8 text-sm text-muted-foreground">
