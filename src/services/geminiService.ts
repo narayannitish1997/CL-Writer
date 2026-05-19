@@ -3,10 +3,20 @@ import { GoogleGenAI, Type } from "@google/genai";
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 export interface CompanyResearch {
-  problemSolving: string;
-  valueCreation: string;
-  cultureAndValues: string;
-  recentNews: string;
+  companyIntelligence: {
+    recentNews: string;
+    strategicPriorities: string;
+    productLaunches: string;
+    cultureSignals: string;
+    leadershipInterviews: string;
+    annualReportHighlights: string;
+  };
+  roleIntelligence: {
+    coreResponsibilities: string;
+    businessChallenges: string;
+    successMetrics: string;
+    crossFunctionalInteractions: string;
+  };
 }
 
 export interface CoverLetterRequest {
@@ -18,15 +28,76 @@ export interface CoverLetterRequest {
   additionalContext?: string;
 }
 
-export async function researchCompany(companyName: string): Promise<CompanyResearch> {
-  const prompt = `Research the company "${companyName}". 
-  Provide a detailed analysis of:
-  1. What core problems are they solving?
-  2. How do they create value for their customers?
-  3. What is their company culture and core values?
-  4. Any significant recent news or strategic shifts.
+export interface FitIntelligence {
+  experienceMapping: string;
+  relevantAchievements: string;
+  uniquePerspective: string;
+}
+
+export async function analyzeFit(
+  resumeText: string,
+  research: CompanyResearch,
+  jobDescription: string
+): Promise<FitIntelligence> {
+  const prompt = `Perform a "Fit Intelligence" analysis based on the following data:
   
-  Focus on information relevant for a job applicant (MBA student) to show deep motivation.`;
+  RESUME: ${resumeText}
+  
+  COMPANY INTELLIGENCE:
+  - Strategic Priorities: ${research.companyIntelligence.strategicPriorities}
+  - Culture: ${research.companyIntelligence.cultureSignals}
+  
+  ROLE INTELLIGENCE:
+  - Challenges: ${research.roleIntelligence.businessChallenges}
+  
+  JOB DESCRIPTION: ${jobDescription}
+  
+  Identify:
+  1. EXPERIENCE MAPPING: Which specific parts of the user's background best map to the company's current challenges?
+  2. RELEVANT ACHIEVEMENTS: Which 2-3 achievements from the resume are most critical for this specific role?
+  3. UNIQUE PERSPECTIVE: What unique value or perspective does this candidate bring that others might not?
+  
+  Provide the analysis for an MBA student to see their strategic alignment.`;
+
+  const response = await ai.models.generateContent({
+    model: "gemini-3-flash-preview",
+    contents: prompt,
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          experienceMapping: { type: Type.STRING },
+          relevantAchievements: { type: Type.STRING },
+          uniquePerspective: { type: Type.STRING },
+        },
+        required: ["experienceMapping", "relevantAchievements", "uniquePerspective"],
+      },
+    },
+  });
+
+  return JSON.parse(response.text || "{}");
+}
+
+export async function researchCompany(companyName: string, roleTitle: string): Promise<CompanyResearch> {
+  const prompt = `Research the company "${companyName}" and the role of "${roleTitle}" in depth. 
+  Provide a detailed intelligence report with exactly the following structure:
+  
+  1. COMPANY INTELLIGENCE:
+     - Recent News (last 6-12 months): Key announcements, funding, or pivots.
+     - Strategic Priorities: What is their main focus right now?
+     - Product Launches: Recent or upcoming innovations.
+     - Culture Signals: Employer branding themes, values in action.
+     - Leadership Interviews: Recent quotes or visions from C-suite/leadership.
+     - Annual Report Highlights: Key financial or growth metrics/statements from the latest report.
+
+  2. ROLE INTELLIGENCE:
+     - Core Responsibilities: Beyond the generic, what does this role actually do?
+     - Likely Business Challenges: What is the person in this role trying to solve?
+     - Success Metrics: How is performance measured in this role?
+     - Cross-functional Interactions: Who do they work with (departments/teams)?
+
+  Focus on information that would help an MBA student write a world-class, highly personalized application.`;
 
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
@@ -37,12 +108,30 @@ export async function researchCompany(companyName: string): Promise<CompanyResea
       responseSchema: {
         type: Type.OBJECT,
         properties: {
-          problemSolving: { type: Type.STRING },
-          valueCreation: { type: Type.STRING },
-          cultureAndValues: { type: Type.STRING },
-          recentNews: { type: Type.STRING },
+          companyIntelligence: {
+            type: Type.OBJECT,
+            properties: {
+              recentNews: { type: Type.STRING },
+              strategicPriorities: { type: Type.STRING },
+              productLaunches: { type: Type.STRING },
+              cultureSignals: { type: Type.STRING },
+              leadershipInterviews: { type: Type.STRING },
+              annualReportHighlights: { type: Type.STRING },
+            },
+            required: ["recentNews", "strategicPriorities", "productLaunches", "cultureSignals", "leadershipInterviews", "annualReportHighlights"],
+          },
+          roleIntelligence: {
+            type: Type.OBJECT,
+            properties: {
+              coreResponsibilities: { type: Type.STRING },
+              businessChallenges: { type: Type.STRING },
+              successMetrics: { type: Type.STRING },
+              crossFunctionalInteractions: { type: Type.STRING },
+            },
+            required: ["coreResponsibilities", "businessChallenges", "successMetrics", "crossFunctionalInteractions"],
+          },
         },
-        required: ["problemSolving", "valueCreation", "cultureAndValues", "recentNews"],
+        required: ["companyIntelligence", "roleIntelligence"],
       },
     },
   });
@@ -55,52 +144,80 @@ export async function generateCoverLetter(
   research: CompanyResearch
 ): Promise<string> {
   const prompt = `
-    You are an expert career consultant specializing in the German job market.
-    Write a highly personalized, "out-of-the-box" cover letter for an MBA student.
-    
-    CRITICAL PHILOSOPHY:
-    - Chase the COMPANY first, then the ROLE.
-    - Show deep motivation based on the research provided and the user's personal connection.
-    - Connect the student's past experience and MBA skills to the company's value creation and the specific requirements in the Job Description.
-    - Tone: Professional yet natural, authentic, and passionate. Avoid generic AI-sounding phrases.
-    - Language: English (standard for many international MBA roles in Germany) unless specified otherwise.
-    
+    You are an elite career strategist and cover letter expert with deep understanding of recruiter psychology, ATS systems, and the modern job market.
+
+    TASK: Write a tailored, high-impact cover letter that gets shortlisted in the top 5% of applicants.
+
+    CRITICAL WRITING CONSTRAINTS:
+    - BOLD, SHARP HOOK: Start with an attention-grabbing opening in the first two lines. No "I am writing to apply".
+    - DEEP MOTIVATION: Focus on your "WHY". Connect your mindset and motivation to the company's mission and culture (${research.companyIntelligence.cultureSignals}). Talk about why this specific move matters to you.
+    - THINKING PROCESS: Explain how you think. How would you approach their specific challenges (${research.roleIntelligence.businessChallenges})? Show them your strategic reasoning, not just your history.
+    - BEYOND THE RESUME: Share perspectives, stories, or "behind the scenes" thinking that isn't captured in your resume bullets (${request.resumeText}).
+    - HUMAN AUTHENTICITY: Write in a natural, conversational flow. Use simple but impactful vocabulary. Absolutely NO HYPHENS or dashes. No AI filler words. Include small, negligible grammatical quirks (like starting a sentence with 'And' or 'But') so it feels drafted by a thoughtful human.
+    - CONFIDENT CLOSING: A professional end with a soft but clear CTA.
+    - ATS OPTIMIZATION: Natural integration of keywords from the job description.
+
+    STRICT PROHIBITION:
+    - NO NEWS REPORTER MODE: Do not tell the company what is in their own news. They know it. Focus on your motivation instead.
+    - NO ROBOT SPEAK: No "ideal candidate," "synergy," "leveraging," or "fast-paced world."
+    - NO HYPHENS: Use only periods and commas for punctuation.
+
     INPUT DATA:
-    Company: ${request.companyName}
-    Role: ${request.roleTitle}
-    
-    JOB DESCRIPTION:
-    ${request.jobDescription}
-    
-    USER'S PERSONAL CONNECTION/MOTIVATION:
-    ${request.userMotivation || "Not provided"}
-    
-    COMPANY RESEARCH:
-    - Problems Solved: ${research.problemSolving}
-    - Value Creation: ${research.valueCreation}
-    - Culture/Values: ${research.cultureAndValues}
-    - Recent News: ${research.recentNews}
-    
-    RESUME SUMMARY:
-    ${request.resumeText}
-    
-    ADDITIONAL CONTEXT:
-    ${request.additionalContext || "None"}
-    
-    STRUCTURE:
-    1. Hook: Why THIS company? (Based on research/news/mission and user's motivation)
-    2. The "Why Me" (Company Fit): How my background aligns with their problems/values and my personal connection.
-    3. The "Why Me" (Role Fit): How my MBA skills add specific value to the requirements in the Job Description.
-    4. Call to Action: Professional and eager.
+    - Job: ${request.jobDescription}
+    - User Story: ${request.resumeText} | Motivation Spark: ${request.userMotivation || "Not provided"}
+    - Role Context & Needs: ${research.roleIntelligence.coreResponsibilities} | ${research.roleIntelligence.businessChallenges}
+    - Extra User Context: ${request.additionalContext || "None"}
+
+    OUTPUT: A complete, modern cover letter.
   `;
 
   const response = await ai.models.generateContent({
-    model: "gemini-3.1-pro-preview",
+    model: "gemini-3-flash-preview",
     contents: prompt,
     config: {
-      temperature: 0.8,
+      temperature: 0.75,
     },
   });
 
-  return response.text || "";
+  return response.text || "Failed to generate cover letter.";
+}
+
+export async function refineCoverLetter(
+  currentLetter: string,
+  feedback: string,
+  research: CompanyResearch,
+  request: CoverLetterRequest
+): Promise<string> {
+  const prompt = `
+    You are an elite career strategist refining a cover letter based on candidate feedback.
+    
+    ORIGINAL COVER LETTER:
+    ${currentLetter}
+    
+    CANDIDATE FEEDBACK:
+    "${feedback}"
+    
+    REFINEMENT RULES:
+    1. PRIORITIZE THINKING PROCESS: Ensure the letter shows how the candidate solves problems, not just what they did.
+    2. STRENGTHEN MOTIVATION: Ground the excitement in the candidate's personal "Why".
+    3. REMOVE NEWS RECITALS: If the draft still sounds like a news report, strip that out.
+    4. HUMAN FLOW: Keep it conversational, simple words, NO HYPHENS, and small human quirks.
+    5. ADDRESS FEEDBACK: "${feedback}"
+    
+    CONTEXT:
+    - Role Needs: ${research.roleIntelligence.businessChallenges}
+    - User Background: ${request.resumeText}
+    
+    Return ONLY the refined text.
+  `;
+
+  const response = await ai.models.generateContent({
+    model: "gemini-3-flash-preview",
+    contents: prompt,
+    config: {
+      temperature: 0.7,
+    },
+  });
+
+  return response.text || currentLetter;
 }
